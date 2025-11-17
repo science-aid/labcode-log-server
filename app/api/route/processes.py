@@ -1,4 +1,4 @@
-from define_db.models import Process, Run, Operation
+from define_db.models import Process, Run, Operation, Port, PortConnection
 from define_db.database import SessionLocal
 from api.response_model import ProcessResponse, ProcessListResponse, ProcessResponseEnhanced, ProcessDetailResponse, PortResponse
 from fastapi import APIRouter, Query
@@ -135,6 +135,100 @@ def load_port_info_from_yaml(storage_address: str, process_name: str, process_ty
         return None
 
 
+def load_port_info_from_db(session, process_id: int) -> Optional[Dict]:
+    """
+    DBからポート情報を取得する
+
+    Args:
+        session: SQLAlchemyセッション
+        process_id: プロセスID
+
+    Returns:
+        dict: ポート情報 {"input": [...], "output": [...]}
+              または None (ポート情報が存在しない場合)
+    """
+    try:
+        # 1. Portレコード取得
+        ports = session.query(Port).filter(
+            Port.process_id == process_id
+        ).order_by(Port.position).all()
+
+        if not ports:
+            return None
+
+        # 2. Processオブジェクト取得 (run_id取得のため)
+        process = session.query(Process).filter(Process.id == process_id).first()
+        if not process:
+            return None
+
+        run_id = process.run_id
+
+        # 3. 入力ポート構築
+        input_ports = []
+        for port in [p for p in ports if p.port_type == 'input']:
+            # 接続元検索
+            connection = session.query(PortConnection).filter(
+                PortConnection.target_port_id == port.id,
+                PortConnection.run_id == run_id
+            ).first()
+
+            connected_from = None
+            if connection:
+                source_port = session.query(Port).filter(
+                    Port.id == connection.source_port_id
+                ).first()
+                if source_port:
+                    source_process = session.query(Process).filter(
+                        Process.id == source_port.process_id
+                    ).first()
+                    if source_process:
+                        connected_from = f"{source_process.name}.{source_port.port_name}"
+
+            input_ports.append({
+                'id': port.port_name,
+                'name': port.port_name,
+                'data_type': port.data_type,
+                'connected_from': connected_from
+            })
+
+        # 4. 出力ポート構築
+        output_ports = []
+        for port in [p for p in ports if p.port_type == 'output']:
+            # 接続先検索
+            connection = session.query(PortConnection).filter(
+                PortConnection.source_port_id == port.id,
+                PortConnection.run_id == run_id
+            ).first()
+
+            connected_to = None
+            if connection:
+                target_port = session.query(Port).filter(
+                    Port.id == connection.target_port_id
+                ).first()
+                if target_port:
+                    target_process = session.query(Process).filter(
+                        Process.id == target_port.process_id
+                    ).first()
+                    if target_process:
+                        connected_to = f"{target_process.name}.{target_port.port_name}"
+
+            output_ports.append({
+                'id': port.port_name,
+                'name': port.port_name,
+                'data_type': port.data_type,
+                'connected_to': connected_to
+            })
+
+        return {
+            'input': input_ports if input_ports else None,
+            'output': output_ports if output_ports else None
+        }
+
+    except Exception as e:
+        print(f"Error loading ports from DB for process {process_id}: {e}")
+        return None
+
+
 @router.get("/processes", tags=["processes"], response_model=ProcessListResponse)
 def list_processes(
     limit: int = Query(100, ge=1, le=1000, description="取得件数"),
@@ -230,17 +324,24 @@ def read(id: int):
         if not run:
             raise HTTPException(status_code=404, detail="Run not found")
 
-        # YAMLファイルからポート情報を取得
+        # ポート情報取得（DBを優先、フォールバックでYAML）
         ports = None
-        if run.storage_address:
+
+        # Step 1: DBから取得を試行
+        try:
+            ports = load_port_info_from_db(session, id)
+        except Exception as e:
+            print(f"Failed to load port info from DB for process {id}: {e}")
+
+        # Step 2: DBにない場合、YAMLからフォールバック（互換性維持）
+        if ports is None and run.storage_address:
             try:
                 ports = load_port_info_from_yaml(
                     storage_address=run.storage_address,
                     process_name=process.name
                 )
             except Exception as e:
-                # YAMLパース失敗時はログに記録し、ポート情報なしで返却
-                print(f"Failed to load port info for process {id}: {e}")
+                print(f"Failed to load port info from YAML for process {id}: {e}")
                 ports = None
 
         # ProcessDetailResponseを構築

@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from api.route import users, projects, runs, processes, operations, edges
+from api.route import users, projects, runs, processes, operations, edges, ports
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
@@ -22,3 +22,4 @@ app.include_router(runs.router, prefix="/api")
 app.include_router(processes.router, prefix="/api")
 app.include_router(operations.router, prefix="/api")
 app.include_router(edges.router, prefix="/api")
+app.include_router(ports.router, prefix="/api")

@@ -148,6 +148,35 @@ class PortsResponse(BaseModel):
     output: Optional[List[PortResponse]] = None
 
 
+class PortDetailResponse(BaseModel):
+    """ポート詳細情報のレスポンスモデル（新規API用）"""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    process_id: int
+    port_name: str
+    port_type: str  # "input" | "output"
+    data_type: str
+    position: int
+    is_required: bool
+    default_value: Optional[str] = None
+    description: Optional[str] = None
+
+
+class PortConnectionResponse(BaseModel):
+    """ポート接続情報のレスポンスモデル（新規API用）"""
+    connection_id: int
+    run_id: int
+    source_process_id: int
+    source_process_name: str
+    source_port_id: int
+    source_port_name: str
+    target_process_id: int
+    target_process_name: str
+    target_port_id: int
+    target_port_name: str
+
+
 class ProcessResponseEnhanced(BaseModel):
     """プロセス基本情報のレスポンスモデル（拡張版）
 
