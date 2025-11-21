@@ -69,6 +69,7 @@ class ProcessResponse(BaseModel):
     name: str
     run_id: int
     storage_address: str
+    process_type: Optional[str] = None
 
     class Config:
         from_attributes = True

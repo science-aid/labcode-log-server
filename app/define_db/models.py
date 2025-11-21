@@ -101,6 +101,13 @@ class Process(Base):
     )
     storage_address: Mapped[str] = mapped_column(String(256))
 
+    # ★追加: process_typeカラム
+    process_type: Mapped[str] = mapped_column(
+        String(256),
+        nullable=True,
+        comment="プロセスタイプ (例: ServePlate96, DispenseLiquid96Wells)"
+    )
+
     # ★追加: Portへの逆参照
     ports: Mapped[List["Port"]] = relationship(
         "Port",

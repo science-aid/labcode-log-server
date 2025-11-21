@@ -89,6 +89,10 @@ class YAMLPortImporter:
             print(f"Warning: Process type not found for {process.name}")
             return 0
 
+        # ★NEW: ProcessレコードにもProcess typeを保存
+        if not process.process_type:
+            process.process_type = process_type
+
         # manipulate.yamlからポート定義を取得
         process_def = None
         for pdef in manipulate_data:

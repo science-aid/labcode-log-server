@@ -103,8 +103,6 @@ def read_processes(run_id: int):
             .all()
 
         # ProcessResponseEnhancedに変換
-        # 注: type, status, created_at, updated_atはDBに存在しないため、
-        # 一時的にデフォルト値を設定
         # started_at/finished_atはRunテーブルから取得
         result = []
         for p in processes:
@@ -112,7 +110,7 @@ def read_processes(run_id: int):
                 id=p.id,
                 run_id=p.run_id,
                 name=p.name,
-                type="unknown",  # TODO: YAMLから取得
+                type=p.process_type if p.process_type else "unknown",
                 status="completed",  # TODO: YAMLから取得または推定
                 created_at=run.added_at if run.added_at else datetime.now(),  # Runから取得
                 updated_at=datetime.now(),   # TODO: YAMLまたはRunから取得

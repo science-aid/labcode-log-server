@@ -260,15 +260,13 @@ def list_processes(
             .all()
 
         # ProcessResponseEnhancedに変換
-        # 注: type, status, created_at, updated_atはDBに存在しないため、
-        # 一時的にデフォルト値を設定
         items = []
         for p in processes:
             items.append(ProcessResponseEnhanced(
                 id=p.id,
                 run_id=p.run_id,
                 name=p.name,
-                type="unknown",  # TODO: YAMLから取得
+                type=p.process_type if p.process_type else "unknown",
                 status="completed",  # TODO: YAMLから取得または推定
                 created_at=datetime.now(),  # TODO: YAMLまたはRunから取得
                 updated_at=datetime.now()   # TODO: YAMLまたはRunから取得
@@ -284,7 +282,8 @@ def list_processes(
 def create(
         name: str = Form(),
         run_id: int = Form(),
-        storage_address: str = Form()
+        storage_address: str = Form(),
+        process_type: Optional[str] = Form(None)
 ):
     with SessionLocal() as session:
         # Check run existence
@@ -294,7 +293,8 @@ def create(
         process_to_add = Process(
             name=name,
             run_id=run_id,
-            storage_address=storage_address
+            storage_address=storage_address,
+            process_type=process_type
         )
         session.add_all([process_to_add])
         session.commit()
@@ -349,7 +349,7 @@ def read(id: int):
             id=process.id,
             run_id=process.run_id,
             name=process.name,
-            type="unknown",  # TODO: YAMLから取得
+            type=process.process_type if process.process_type else "unknown",
             status="completed",  # TODO: Runのstatusから推定
             created_at=run.added_at if run.added_at else datetime.now(),
             updated_at=datetime.now(),
