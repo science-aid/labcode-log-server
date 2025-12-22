@@ -34,6 +34,7 @@ class RunResponse(BaseModel):
     finished_at: Optional[datetime]
     status: str
     storage_address: str
+    storage_mode: Optional[str] = None  # ★追加: 's3' または 'local'
     deleted_at: datetime | None
     display_visible: bool
     # project: Optional[ProjectResponse]  # リレーション
@@ -55,6 +56,7 @@ class RunResponseWithProjectName(BaseModel):
     finished_at: Optional[datetime]
     status: str
     storage_address: str
+    storage_mode: Optional[str] = None  # ★追加: 's3' または 'local'
     deleted_at: datetime | None
     display_visible: bool
     # project: Optional[ProjectResponse]  # リレーション

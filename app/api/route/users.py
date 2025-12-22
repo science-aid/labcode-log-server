@@ -1,6 +1,7 @@
 from define_db.models import User, Run, Project
 from define_db.database import SessionLocal
 from api.response_model import UserResponse, RunResponseWithProjectName
+from services.hal import batch_infer_storage_modes
 from fastapi import Form
 from fastapi import APIRouter
 from fastapi import HTTPException
@@ -62,9 +63,13 @@ def read_runs(id: int, include_hidden: bool = False):
             query = query.filter(Run.display_visible == True)
 
         runs = query.all()
+
+        # バッチ最適化: 未キャッシュのRunのstorage_modeを一括推論・永続化
+        # 1回のS3リクエスト + 1回のDBクエリで全Run判定（N回→2回に削減）
+        batch_infer_storage_modes(session, runs)
+
         for run in runs:
             run.project_name = run.project.name
-        # return [run for run, _ in runs]
         return runs
 
 
