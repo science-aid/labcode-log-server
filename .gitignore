@@ -1,7 +1,7 @@
 .venv
 __pycache__
 *.db
-.env.env.s3.backup
+.env
 
 # Backup files (not to be tracked)
 app/scripts_backup_local/
