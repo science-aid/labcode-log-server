@@ -2,6 +2,7 @@
 __pycache__
 *.db
 .env
+*.db*
 
 # Backup files (not to be tracked)
 app/scripts_backup_local/
