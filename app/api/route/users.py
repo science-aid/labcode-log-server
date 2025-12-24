@@ -1,14 +1,53 @@
 from define_db.models import User, Run, Project
 from define_db.database import SessionLocal
-from api.response_model import UserResponse, RunResponseWithProjectName
+from api.response_model import UserResponse, RunResponseWithProjectName, ProjectResponse
 from services.hal import batch_infer_storage_modes
-from fastapi import Form
+from fastapi import Form, Query
 from fastapi import APIRouter
 from fastapi import HTTPException
 from sqlalchemy.orm import joinedload, selectinload
 from typing import List
 
 router = APIRouter()
+
+
+# ============================================================
+# Admin API: ユーザー一覧取得
+# ============================================================
+
+@router.get("/users/list", tags=["users"], response_model=List[UserResponse])
+def list_all(
+    limit: int = Query(default=100, ge=1, le=1000, description="Maximum number of users to return"),
+    offset: int = Query(default=0, ge=0, description="Number of users to skip")
+):
+    """
+    全ユーザー一覧を取得
+
+    管理画面のユーザー一覧表示で使用。
+    ページネーション対応。
+    """
+    with SessionLocal() as session:
+        users = session.query(User).offset(offset).limit(limit).all()
+        return [UserResponse.model_validate(u) for u in users]
+
+
+# ============================================================
+# Admin API: ユーザーのプロジェクト一覧取得
+# ============================================================
+
+@router.get("/users/{id}/projects", tags=["users"], response_model=List[ProjectResponse])
+def read_user_projects(id: int):
+    """
+    ユーザーのプロジェクト一覧を取得
+
+    指定されたユーザーが所有するプロジェクトの一覧を返す。
+    """
+    with SessionLocal() as session:
+        user = session.query(User).filter(User.id == id).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        projects = session.query(Project).filter(Project.user_id == id).all()
+        return [ProjectResponse.model_validate(p) for p in projects]
 
 
 @router.post("/users/", tags=["users"], response_model=UserResponse)
